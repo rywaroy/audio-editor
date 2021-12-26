@@ -1,0 +1,1 @@
+export const WORDELEMENT_TO_NODE = new WeakMap();
