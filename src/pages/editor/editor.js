@@ -1,30 +1,12 @@
 import debounce from 'lodash/debounce';
 import throttle from 'lodash/throttle';
-import EditorCore from './editorCore';
+import EditorCore from './core';
 import Event from './utils/event';
 import h from './editorDom/h';
 import { patch } from './editorDom/patch';
 import findPath from './utils/findPath';
-import { onKeyDown } from './events';
-
-const formatDuration = time => {
-    let timeFormatted,
-        timeSF = 0,
-        timeMF = 0,
-        timeHF = 0
-    time = parseInt(time / 1000)
-    let timeS = time % 60
-    let timeM = Math.floor(time / 60) % 60
-    let timeH = Math.floor(time / 60 / 60)
-
-    timeS < 10 ? (timeSF = '0' + timeS) : (timeSF = '' + timeS)
-    timeM < 10 ? (timeMF = '0' + timeM) : (timeMF = '' + timeM)
-    timeH < 10 ? (timeHF = '0' + timeH) : (timeHF = '' + timeH)
-
-    timeFormatted = timeHF + ':' + timeMF + ':' + timeSF
-
-    return timeFormatted
-}
+import formatDuration from './utils/formatDuration';
+import { onKeyDown, onBeforeInput } from './events';
 
 export default class Editor extends Event {
     constructor(element) {
@@ -40,6 +22,7 @@ export default class Editor extends Event {
     bind() {
         document.addEventListener('selectionchange', this.onSelectionChange.bind(this));
         this.element.addEventListener('keydown', onKeyDown.bind(this));
+        this.element.addEventListener('beforeinput', onBeforeInput.bind(this));
     }
 
     onSelectionChange() {
@@ -52,11 +35,12 @@ export default class Editor extends Event {
 
             const startPath = findPath(startDom, this.vnode);
             const endPath = findPath(endDom, this.vnode);
-
-            this.editorCore.setSelection({
-                anchor: { path: startPath, offset: startOffset },
-                focus: { path: endPath, offset: endOffset },
-            });
+            if (startPath && endPath) {
+                this.editorCore.setSelection({
+                    anchor: { path: startPath, offset: startOffset },
+                    focus: { path: endPath, offset: endOffset },
+                });
+            }
         }
     }
 
@@ -93,7 +77,11 @@ export default class Editor extends Event {
 
     findWordElementByPath(path) {
         const [pIndex, wIndex] = path;
-        return this.vnode.children[pIndex].children[1].children[wIndex].elm.childNodes[0];
+        const elm = this.vnode.children[pIndex].children[1].children[wIndex].elm;
+        if (elm.childNodes.length > 0) {
+            return elm.childNodes[0];
+        }
+        return elm;
     }
 
     updateContent(content) {

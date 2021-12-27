@@ -189,7 +189,7 @@ function patchWords(oldVnode, vnode) {
         } else {
             words[j].elm = oldWords[i].elm;
             if (words[j].text !== oldWords[i].text) {
-                oldWords[j].elm.innerText = words[j].text;
+                oldWords[i].elm.innerText = words[j].text;
             }
             i++;
             j++;

@@ -39,7 +39,7 @@ const content = [
         roleName: '说话人',
         pTime: [4000, 8000],
         words: [
-            { text: '这是', time: [4000, 5000] },
+            { text: '这是12345', time: [4000, 5000] },
             { text: '第二', time: [5000, 6000] },
             { text: '段', time: [6000, 7000] },
             { text: '话。', time: [7000, 8000] },
@@ -124,7 +124,7 @@ export default function EditorComponent() {
         // patch(, contentToVnode(editor.content));
         const editor = new Editor(document.getElementById('editor'));
         editor.on('onChange', (content, vnode) => {
-            // setJson(JSON.stringify(content, null, 4));
+            setJson(JSON.stringify(content, null, 4));
             console.log(vnode);
         });
         editor.setContent(content);
@@ -180,6 +180,7 @@ export default function EditorComponent() {
             <button id="time" onClick={changeTime}>
                 时间
             </button>
+            <p>sdfs</p>
         </div>
     );
 }
