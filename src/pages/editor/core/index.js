@@ -57,19 +57,7 @@ class EditorCore {
             }
             // 段落开头，合并段落
             if (wIndex === 0 && offset === 0) {
-                const firstPara = this.content[pIndex - 1];
-                const secondPara = this.content[pIndex];
-                const newPara = JSON.parse(JSON.stringify(firstPara));
-
-                newPara.pId = null;
-                newPara.pTime[0] = firstPara.pTime[0];
-                newPara.pTime[1] = secondPara.pTime[1];
-                newPara.words = firstPara.words.concat(secondPara.words);
-                this.content.splice(pIndex - 1, 2, newPara);
-
-                const lastWordIndex = firstPara.words.length - 1;
-                this.setCollapsedSelection([pIndex - 1, lastWordIndex], firstPara.words[lastWordIndex].text.length);
-
+                this.mergeParagraph();
             } else if (offset === 0) { // 光标在词首，删除上一个词的末尾
                 const preWord = this.content[pIndex].words[wIndex - 1];
                 preWord.text = preWord.text.substring(0, preWord.text.length - 1);
@@ -129,16 +117,12 @@ class EditorCore {
             if (anchorPIndex === focusPIndex) {
                 // 删除中间的词
                 this.content[anchorPIndex].words.splice(anchorWIndex + 1, focusWIndex - anchorWIndex - 1);
-                // this.setCollapsedSelection([focusPIndex, anchorWIndex], startText.length);
                 if (!endText) {
                     this.content[anchorPIndex].words.splice(anchorWIndex + 1, 1);
-                    // this.setCollapsedSelection([focusPIndex, anchorWIndex], startText.length);
                 }
                 if (!startText) {
                     this.content[anchorPIndex].words.splice(anchorWIndex, 1);
-                    // this.setCollapsedSelection([focusPIndex, anchorWIndex], 0);
                 }
-                // let newOffset = startText ? startText.length : 0;
                 this.setCollapsedSelection([focusPIndex, anchorWIndex], startText ? startText.length : 0);
             }
         }
@@ -147,6 +131,23 @@ class EditorCore {
         if (anchorPIndex === focusPIndex) {
 
         }
+    }
+
+    mergeParagraph() {
+        const { path } = this.selection.anchor;
+        const [pIndex] = path;
+        const firstPara = this.content[pIndex - 1];
+        const secondPara = this.content[pIndex];
+        const newPara = JSON.parse(JSON.stringify(firstPara));
+
+        newPara.pId = null;
+        newPara.pTime[0] = firstPara.pTime[0];
+        newPara.pTime[1] = secondPara.pTime[1];
+        newPara.words = firstPara.words.concat(secondPara.words);
+        this.content.splice(pIndex - 1, 2, newPara);
+
+        const lastWordIndex = firstPara.words.length - 1;
+        this.setCollapsedSelection([pIndex - 1, lastWordIndex], firstPara.words[lastWordIndex].text.length);
     }
 }
 
