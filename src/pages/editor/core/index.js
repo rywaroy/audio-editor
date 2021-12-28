@@ -124,12 +124,35 @@ class EditorCore {
                     this.content[anchorPIndex].words.splice(anchorWIndex, 1);
                 }
                 this.setCollapsedSelection([focusPIndex, anchorWIndex], startText ? startText.length : 0);
+            } else { // 不同行
+                // 句子内容删完，清除整句
+                this.content[anchorPIndex].words = this.content[anchorPIndex].words.slice(0, startText ? anchorWIndex + 1 : anchorWIndex);
+                this.content[focusPIndex].words = this.content[focusPIndex].words.slice(endText ? focusWIndex : focusWIndex + 1, this.content[focusPIndex].words.length);
+                
+                let pIndex = anchorPIndex + 1;
+                let wIndex = 0;
+                let offset = 0;
+
+                if (focusPIndex - anchorPIndex > 1) {
+                    this.content.splice(anchorPIndex + 1, focusPIndex - anchorPIndex - 1);
+                }
+
+                // 结尾段落全部删除
+                if (this.content[anchorPIndex + 1].words.length === 0) {
+                    this.content.splice(anchorPIndex + 1, 1);
+                    if (anchorPIndex + 1 === this.content.length) {
+                        pIndex = anchorPIndex;
+                        wIndex = this.content[anchorPIndex].words.length - 1;
+                        offset = this.content[anchorPIndex].words[wIndex].text.length;
+                    }
+                }
+                // 起始段落全部删除
+                if (this.content[anchorPIndex].words.length === 0) {
+                    this.content.splice(anchorPIndex, 1);
+                    pIndex = anchorPIndex;
+                }
+                this.setCollapsedSelection([pIndex, wIndex], offset);
             }
-        }
-
-        // 同一个段内
-        if (anchorPIndex === focusPIndex) {
-
         }
     }
 
