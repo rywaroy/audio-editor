@@ -72,9 +72,14 @@ class EditorCore {
             word.text = word.text.substring(0, offset) + text + word.text.substring(offset, word.text.length);
             this.selection.anchor.offset = offset + text.length;
             this.selection.focus.offset = offset + text.length;
+        } else {
+            // 先删除内容
+            this.deleteBackward();
+            this.insertText(text);
         }
     }
 
+    // 前删
     deleteBackward() {
         if (!this.selection) {
             return;
@@ -109,6 +114,114 @@ class EditorCore {
                 this.selection.anchor.offset = offset - 1;
                 this.selection.focus.offset = offset - 1;
             }
+        } else { // 选区删除
+            this.deleteContentBySelection();
+        }
+    }
+
+    // 后删
+    deleteForward() {
+        if (!this.selection) {
+            return;
+        }
+        if (this.isCollapsed()) {
+            // 段落结尾，删除不做处理
+            if (this.isEnd()) {
+                return;
+            }
+
+            let { path, offset } = this.selection.anchor;
+            let [pIndex, wIndex] = path;
+            let word = this.content[pIndex].words[wIndex];
+
+            // 词结尾, 光标定位在下个词的开头
+            if (offset === word.text.length) {
+                wIndex = wIndex + 1;
+                offset = 0;
+                word = this.content[pIndex].words[wIndex];
+            }
+
+            const preWord = this.content[pIndex].words[wIndex - 1];
+            const nextWord = this.content[pIndex].words[wIndex + 1];
+
+            // 如果词只有一个字，则删除该词
+            if (word.text.length === 1) {
+                // 光标设置成下一个词的开头
+                if (nextWord) {
+                    this.content[pIndex].words.splice(wIndex, 1);
+                    this.setCollapsedSelection([pIndex, wIndex], 0);
+                } else if (preWord) { // 删除的是最后一个词，光标设置成上一个词的结尾
+                    this.content[pIndex].words.splice(wIndex, 1);
+                    this.setCollapsedSelection([pIndex, wIndex - 1], preWord.text.length);
+                } else { // 全段只剩最后一个词，不删除，设置空占位
+                    word.text = '';
+                    this.setCollapsedSelection([pIndex, 0], 0);
+                }
+            } else {
+                word.text = word.text.substring(0, offset) + word.text.substring(offset + 1, word.text.length);
+            }
+
+            
+
+            // 词结尾，删除下一个词的开头内容
+            // if (offset === word.text.length) {
+            //     const nextWord = this.content[pIndex].words[wIndex + 1];
+            //     nextWord.text = nextWord.text.slice(1);
+            //     // 光标设置成下一个词的开头
+            //     this.setCollapsedSelection([pIndex, wIndex + 1], 0);
+            // } else {
+                
+            // }
+
+
+            // 删除的是最后一个词
+            // if (wIndex === this.content[pIndex].words.length - 1) {
+            //     // if (this.content[pIndex].words.length > wIndex) {
+            //     //     
+            //     //     this.setCollapsedSelection([pIndex, wIndex], 0);
+            //     // } else { // 如果后面没有词，则设置成上一个词的结尾
+            //     //     this.setCollapsedSelection([pIndex, wIndex - 1], this.content[pIndex].words[wIndex - 1].text.length);
+            //     // }
+            //     // 如果词只有一个字，则删除该词
+            //     if (word.text.length === 1) {
+            //         this.content[pIndex].words.splice(wIndex, 1);
+            //         // 光标设置成上一个词的结尾
+            //         this.setCollapsedSelection([pIndex, wIndex - 1], this.content[pIndex].words[wIndex - 1].text.length);
+            //     } else {
+            //         word.text = word.text.slice(0, word.text.length - 1);
+            //     }
+
+            // } else { // 删除的不是最后一个词
+                
+            // }
+
+             
+            // 文章开头，删除不做处理
+            // if (pIndex === 0 && wIndex === 0 && offset === 0) {
+            //     return;
+            // }
+            // // 段落开头，合并段落
+            // if (this.isStart()) {
+            //     this.mergeParagraph();
+            // } else if (offset === 0) { // 光标在词首，删除上一个词的末尾
+            //     const preWord = this.content[pIndex].words[wIndex - 1];
+            //     preWord.text = preWord.text.substring(0, preWord.text.length - 1);
+            //     this.setCollapsedSelection([pIndex, wIndex - 1], preWord.text.length);
+            // } else if (offset === 1 && word.text.length === 1) { // 删除最后一个词
+            //     if (this.content[pIndex].words.length === 1) { // 整段中最后一个词
+            //         const word = this.content[pIndex].words[wIndex];
+            //         word.text = '';
+            //         this.setCollapsedSelection([pIndex, 0], 0);
+            //     } else {
+            //         const preWord = this.content[pIndex].words[wIndex - 1];
+            //         this.content[pIndex].words.splice(wIndex, 1);
+            //         this.setCollapsedSelection([pIndex, wIndex - 1], preWord.text.length);
+            //     }
+            // } else { // 删词中内容
+            //     word.text = word.text.substring(0, offset - 1) + word.text.substring(offset, word.text.length);
+            //     this.selection.anchor.offset = offset - 1;
+            //     this.selection.focus.offset = offset - 1;
+            // }
         } else { // 选区删除
             this.deleteContentBySelection();
         }

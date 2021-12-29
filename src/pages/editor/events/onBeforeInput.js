@@ -31,6 +31,8 @@ export default function onBeforeInput(e) {
         case 'deleteContent':
         case 'deleteContentForward': {
             // 前删
+            this.editorCore.deleteForward();
+            this.update();
             break;
         }
 
