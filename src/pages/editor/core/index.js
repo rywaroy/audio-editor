@@ -79,7 +79,7 @@ class EditorCore {
         }
     }
 
-    // 前删
+    // 后删
     deleteBackward() {
         if (!this.selection) {
             return;
@@ -90,11 +90,24 @@ class EditorCore {
             const word = this.content[pIndex].words[wIndex];
             // 文章开头，删除不做处理
             if (pIndex === 0 && wIndex === 0 && offset === 0) {
+                // 空段落，删除整个段
+                if (word.text === '' && this.content[pIndex].words.length === 1) {
+                    this.content.splice(pIndex, 1);
+                }
                 return;
             }
             // 段落开头，合并段落
             if (this.isStart()) {
-                this.mergeParagraph();
+                // 空段落，删除整个段
+                if (word.text === '' && this.content[pIndex].words.length === 1) {
+                    const prePara = this.content[pIndex - 1];
+                    const lastWord = prePara.words[prePara.words.length - 1];
+                    this.content.splice(pIndex, 1);
+                    // 光标设置为上一段的末尾
+                    this.setCollapsedSelection([pIndex - 1, prePara.words.length - 1], lastWord.text.length);
+                } else {
+                    this.mergeParagraph();
+                }
             } else if (offset === 0) { // 光标在词首，删除上一个词的末尾
                 const preWord = this.content[pIndex].words[wIndex - 1];
                 preWord.text = preWord.text.substring(0, preWord.text.length - 1);
@@ -119,7 +132,7 @@ class EditorCore {
         }
     }
 
-    // 后删
+    // 前删
     deleteForward() {
         if (!this.selection) {
             return;
@@ -160,68 +173,6 @@ class EditorCore {
             } else {
                 word.text = word.text.substring(0, offset) + word.text.substring(offset + 1, word.text.length);
             }
-
-            
-
-            // 词结尾，删除下一个词的开头内容
-            // if (offset === word.text.length) {
-            //     const nextWord = this.content[pIndex].words[wIndex + 1];
-            //     nextWord.text = nextWord.text.slice(1);
-            //     // 光标设置成下一个词的开头
-            //     this.setCollapsedSelection([pIndex, wIndex + 1], 0);
-            // } else {
-                
-            // }
-
-
-            // 删除的是最后一个词
-            // if (wIndex === this.content[pIndex].words.length - 1) {
-            //     // if (this.content[pIndex].words.length > wIndex) {
-            //     //     
-            //     //     this.setCollapsedSelection([pIndex, wIndex], 0);
-            //     // } else { // 如果后面没有词，则设置成上一个词的结尾
-            //     //     this.setCollapsedSelection([pIndex, wIndex - 1], this.content[pIndex].words[wIndex - 1].text.length);
-            //     // }
-            //     // 如果词只有一个字，则删除该词
-            //     if (word.text.length === 1) {
-            //         this.content[pIndex].words.splice(wIndex, 1);
-            //         // 光标设置成上一个词的结尾
-            //         this.setCollapsedSelection([pIndex, wIndex - 1], this.content[pIndex].words[wIndex - 1].text.length);
-            //     } else {
-            //         word.text = word.text.slice(0, word.text.length - 1);
-            //     }
-
-            // } else { // 删除的不是最后一个词
-                
-            // }
-
-             
-            // 文章开头，删除不做处理
-            // if (pIndex === 0 && wIndex === 0 && offset === 0) {
-            //     return;
-            // }
-            // // 段落开头，合并段落
-            // if (this.isStart()) {
-            //     this.mergeParagraph();
-            // } else if (offset === 0) { // 光标在词首，删除上一个词的末尾
-            //     const preWord = this.content[pIndex].words[wIndex - 1];
-            //     preWord.text = preWord.text.substring(0, preWord.text.length - 1);
-            //     this.setCollapsedSelection([pIndex, wIndex - 1], preWord.text.length);
-            // } else if (offset === 1 && word.text.length === 1) { // 删除最后一个词
-            //     if (this.content[pIndex].words.length === 1) { // 整段中最后一个词
-            //         const word = this.content[pIndex].words[wIndex];
-            //         word.text = '';
-            //         this.setCollapsedSelection([pIndex, 0], 0);
-            //     } else {
-            //         const preWord = this.content[pIndex].words[wIndex - 1];
-            //         this.content[pIndex].words.splice(wIndex, 1);
-            //         this.setCollapsedSelection([pIndex, wIndex - 1], preWord.text.length);
-            //     }
-            // } else { // 删词中内容
-            //     word.text = word.text.substring(0, offset - 1) + word.text.substring(offset, word.text.length);
-            //     this.selection.anchor.offset = offset - 1;
-            //     this.selection.focus.offset = offset - 1;
-            // }
         } else { // 选区删除
             this.deleteContentBySelection();
         }
