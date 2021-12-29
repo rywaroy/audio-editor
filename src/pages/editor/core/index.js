@@ -16,6 +16,7 @@ class EditorCore {
         this.selection = { anchor: { path, offset }, focus: { path, offset } };
     }
 
+    // 光标是否闭合
     isCollapsed() {
         const { anchor, focus } = this.selection;
         if (
@@ -23,6 +24,37 @@ class EditorCore {
             anchor.path[1] === focus.path[1] &&
             anchor.offset === focus.offset
         ) {
+            return true;
+        }
+        return false;
+    }
+
+    // 光标是否在段首
+    isStart() {
+        if (!this.isCollapsed()) {
+            return false;
+        }
+        const { anchor } = this.selection;
+        const { path, offset } = anchor;
+
+        if (path[1] === 0 && offset === 0) {
+            return true;
+        }
+        return false;
+    }
+
+    // 光标是否在段尾
+    isEnd() {
+        if (!this.isCollapsed()) {
+            return false;
+        }
+        const { anchor } = this.selection;
+        const { path, offset } = anchor;
+        const [pIndex, wIndex] = path;
+        const len = this.content[pIndex].words.length;
+        const lastWord = this.content[pIndex].words[len - 1];
+
+        if (wIndex === len - 1 && offset === lastWord.text.length) {
             return true;
         }
         return false;
@@ -56,7 +88,7 @@ class EditorCore {
                 return;
             }
             // 段落开头，合并段落
-            if (wIndex === 0 && offset === 0) {
+            if (this.isStart()) {
                 this.mergeParagraph();
             } else if (offset === 0) { // 光标在词首，删除上一个词的末尾
                 const preWord = this.content[pIndex].words[wIndex - 1];
@@ -124,7 +156,7 @@ class EditorCore {
                     this.content[anchorPIndex].words.splice(anchorWIndex, 1);
                 }
                 this.setCollapsedSelection([focusPIndex, anchorWIndex], startText ? startText.length : 0);
-            } else { // 不同行
+            } else { // 不同段落
                 // 句子内容删完，清除整句
                 this.content[anchorPIndex].words = this.content[anchorPIndex].words.slice(0, startText ? anchorWIndex + 1 : anchorWIndex);
                 this.content[focusPIndex].words = this.content[focusPIndex].words.slice(endText ? focusWIndex : focusWIndex + 1, this.content[focusPIndex].words.length);
@@ -132,7 +164,9 @@ class EditorCore {
                 let pIndex = anchorPIndex + 1;
                 let wIndex = 0;
                 let offset = 0;
+                let merge = true; // 是否合并段落
 
+                // 中间多段删除
                 if (focusPIndex - anchorPIndex > 1) {
                     this.content.splice(anchorPIndex + 1, focusPIndex - anchorPIndex - 1);
                 }
@@ -140,18 +174,24 @@ class EditorCore {
                 // 结尾段落全部删除
                 if (this.content[anchorPIndex + 1].words.length === 0) {
                     this.content.splice(anchorPIndex + 1, 1);
-                    if (anchorPIndex + 1 === this.content.length) {
-                        pIndex = anchorPIndex;
-                        wIndex = this.content[anchorPIndex].words.length - 1;
-                        offset = this.content[anchorPIndex].words[wIndex].text.length;
-                    }
+                    // 光标定位在起始段落末尾
+                    pIndex = anchorPIndex;
+                    wIndex = this.content[anchorPIndex].words.length - 1;
+                    offset = this.content[anchorPIndex].words[wIndex].text.length;
+                    merge = false;
                 }
                 // 起始段落全部删除
                 if (this.content[anchorPIndex].words.length === 0) {
                     this.content.splice(anchorPIndex, 1);
                     pIndex = anchorPIndex;
+                    merge = false;
                 }
                 this.setCollapsedSelection([pIndex, wIndex], offset);
+
+                // 合并段落
+                if (merge) {
+                    this.mergeParagraph();
+                }
             }
         }
     }
