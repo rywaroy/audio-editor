@@ -30,12 +30,11 @@ class EditorCore {
     }
 
     // 光标是否在段首
-    isStart() {
-        if (!this.isCollapsed()) {
-            return false;
+    isStart(location) {
+        if (!location) {
+            location = this.selection.anchor;
         }
-        const { anchor } = this.selection;
-        const { path, offset } = anchor;
+        const { path, offset } = location;
 
         if (path[1] === 0 && offset === 0) {
             return true;
@@ -44,12 +43,11 @@ class EditorCore {
     }
 
     // 光标是否在段尾
-    isEnd() {
-        if (!this.isCollapsed()) {
-            return false;
+    isEnd(location) {
+        if (!location) {
+            location = this.selection.focus;
         }
-        const { anchor } = this.selection;
-        const { path, offset } = anchor;
+        const { path, offset } = location;
         const [pIndex, wIndex] = path;
         const len = this.content[pIndex].words.length;
         const lastWord = this.content[pIndex].words[len - 1];
@@ -60,6 +58,7 @@ class EditorCore {
         return false;
     }
 
+    // 插入文字
     insertText(text) {
         if (!this.selection) {
             return;
@@ -181,10 +180,27 @@ class EditorCore {
     // 删除选取的内容
     deleteContentBySelection() {
         const { anchor, focus } = this.selection;
-        const { path: anchorPath, offset: anchorOffset } = anchor;
-        const { path: focusPath, offset: focusOffset } = focus;
-        const [anchorPIndex, anchorWIndex] = anchorPath;
-        const [focusPIndex, focusWIndex] = focusPath;
+        let { path: anchorPath, offset: anchorOffset } = anchor;
+        let { path: focusPath, offset: focusOffset } = focus;
+        let [anchorPIndex, anchorWIndex] = anchorPath;
+        let [focusPIndex, focusWIndex] = focusPath;
+
+        // 如果起始光标在端尾，则重置为下一段的段首
+        if (this.isEnd(anchor)) {
+            anchorOffset = 0;
+            anchorPIndex = anchorPIndex + 1;
+            anchorWIndex = 0;
+        }
+
+        // 如果结尾光标在端首，则重置为上一段的段尾
+        if (this.isStart(focus)) {
+            const prePara = this.content[focusPIndex - 1];
+            const len = prePara.words.length;
+            const lastWord = prePara.words[len - 1];
+            focusOffset = lastWord.text.length;
+            focusPIndex = focusPIndex - 1;
+            focusWIndex = len - 1;
+        }
 
         // 删除后选区开始的文字
         const startText = this.content[anchorPIndex].words[anchorWIndex].text.slice(0, anchorOffset);
@@ -212,6 +228,7 @@ class EditorCore {
             // 在同一段中，不同词
             if (anchorPIndex === focusPIndex) {
                 // 删除中间的词
+                const word = this.content[anchorPIndex].words[anchorWIndex];
                 this.content[anchorPIndex].words.splice(anchorWIndex + 1, focusWIndex - anchorWIndex - 1);
                 if (!endText) {
                     this.content[anchorPIndex].words.splice(anchorWIndex + 1, 1);
@@ -219,7 +236,13 @@ class EditorCore {
                 if (!startText) {
                     this.content[anchorPIndex].words.splice(anchorWIndex, 1);
                 }
-                this.setCollapsedSelection([focusPIndex, anchorWIndex], startText ? startText.length : 0);
+                // 这一段全部删完
+                if (this.content[anchorPIndex].words.length === 0) {
+                    this.content[anchorPIndex].words = [word];
+                    this.setCollapsedSelection([focusPIndex, 0], 0);
+                } else {
+                    this.setCollapsedSelection([focusPIndex, anchorWIndex], startText ? startText.length : 0);
+                }
             } else { // 不同段落
                 // 句子内容删完，清除整句
                 this.content[anchorPIndex].words = this.content[anchorPIndex].words.slice(0, startText ? anchorWIndex + 1 : anchorWIndex);
@@ -260,6 +283,7 @@ class EditorCore {
         }
     }
 
+    // 合并段落
     mergeParagraph() {
         const { path } = this.selection.anchor;
         const [pIndex] = path;
