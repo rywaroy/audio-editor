@@ -137,14 +137,22 @@ class EditorCore {
             return;
         }
         if (this.isCollapsed()) {
-            // 段落结尾，删除不做处理
-            if (this.isEnd()) {
-                return;
-            }
-
             let { path, offset } = this.selection.anchor;
             let [pIndex, wIndex] = path;
             let word = this.content[pIndex].words[wIndex];
+
+            // 段落结尾，删除不做处理
+            if (this.isEnd()) {
+                // 空段落，删除整个段
+                if (word.text === '' && this.content[pIndex].words.length === 1) {
+                    const prePara = this.content[pIndex - 1];
+                    const lastWord = prePara.words[prePara.words.length - 1];
+                    this.content.splice(pIndex, 1);
+                    // 光标设置为上一段的末尾
+                    this.setCollapsedSelection([pIndex - 1, prePara.words.length - 1], lastWord.text.length);
+                }
+                return;
+            }
 
             // 词结尾, 光标定位在下个词的开头
             if (offset === word.text.length) {
@@ -184,7 +192,6 @@ class EditorCore {
         let { path: focusPath, offset: focusOffset } = focus;
         let [anchorPIndex, anchorWIndex] = anchorPath;
         let [focusPIndex, focusWIndex] = focusPath;
-
         // 如果起始光标在端尾，则重置为下一段的段首
         if (this.isEnd(anchor)) {
             anchorOffset = 0;
@@ -241,7 +248,13 @@ class EditorCore {
                     this.content[anchorPIndex].words = [word];
                     this.setCollapsedSelection([focusPIndex, 0], 0);
                 } else {
-                    this.setCollapsedSelection([focusPIndex, anchorWIndex], startText ? startText.length : 0);
+                    const newWord = this.content[anchorPIndex].words[anchorWIndex];
+                    if (newWord) {
+                        this.setCollapsedSelection([focusPIndex, anchorWIndex], startText ? newWord.text.length : 0);
+                    } else {
+                        const preWord = this.content[anchorPIndex].words[anchorWIndex - 1];
+                        this.setCollapsedSelection([focusPIndex, anchorWIndex - 1], preWord.text.length);
+                    }
                 }
             } else { // 不同段落
                 // 句子内容删完，清除整句
