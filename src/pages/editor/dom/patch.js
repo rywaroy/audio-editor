@@ -26,6 +26,10 @@ function createData(elm, data) {
                 }
             } else if (attr === 'exc') {
                 //
+            } else if (attr === 'class') {
+                if (data[attr]) {
+                    elm.classList.add(data[attr]);
+                }
             } else {
                 elm.setAttribute(attr, data[attr]);
             }
@@ -95,6 +99,7 @@ function patchParagraphs(oldVnode, vnode) {
             oldVnode.elm.insertBefore(newPara, oldPara[i].elm);
             j++;
         } else {
+            patchClass(oldPara[i], para[j]);
             para[j].elm = oldPara[i].elm;
             patchSpeaker(oldPara[i].children[0], para[j].children[0]);
             patchWords(oldPara[i].children[1], para[j].children[1]);
@@ -187,6 +192,7 @@ function patchWords(oldVnode, vnode) {
             oldVnode.elm.insertBefore(newWord, oldWords[i].elm);
             j++;
         } else {
+            patchClass(oldWords[i], words[j]);
             words[j].elm = oldWords[i].elm;
             if (words[j].text !== oldWords[i].text) {
                 oldWords[i].elm.innerText = words[j].text;
@@ -210,6 +216,22 @@ function patchWords(oldVnode, vnode) {
         }
     }
 
+}
+
+function patchClass(oldVnode, vnode) {
+    const oldClass = oldVnode.data.class;
+    const newClass = vnode.data.class;
+
+    if (newClass && oldClass) {
+        if (newClass !== oldClass) {
+            oldVnode.elm.classList.remove(oldClass);
+            oldVnode.elm.classList.add(newClass);
+        }
+    } else if (newClass && !oldClass) {
+        oldVnode.elm.classList.add(newClass);
+    } else if (!newClass && oldClass) {
+        oldVnode.elm.classList.remove(oldClass);
+    }
 }
 
 // export function onlyPatchSpeaker(oldVnode, vnode) {
