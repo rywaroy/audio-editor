@@ -24,6 +24,8 @@ export default function onBeforeInput(e) {
         case 'insertLineBreak':
         case 'insertParagraph': {
             // 换行
+            this.editorCore.splitParagraph();
+            this.update();
             break;
         }
 

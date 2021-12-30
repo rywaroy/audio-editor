@@ -313,6 +313,84 @@ class EditorCore {
         const lastWordIndex = firstPara.words.length - 1;
         this.setCollapsedSelection([pIndex - 1, lastWordIndex], firstPara.words[lastWordIndex].text.length);
     }
+
+    // 分段
+    splitParagraph() {
+        if (!this.selection) {
+            return;
+        }
+        if (this.isCollapsed()) {
+            // 光标在段落开始或结尾不做分段处理
+            if (this.isStart() || this.isEnd()) {
+                return;
+            }
+            const { path, offset } = this.selection.anchor;
+            const [pIndex, wIndex] = path;
+            const para = this.content[pIndex];
+            const word = para.words[wIndex];
+
+            const wordBeginTime = word.time[0];
+            const wordEndTime = word.time[1];
+
+            // 分割的2个 word
+            const firstText = word.text.slice(0, offset);
+            const secondText = word.text.slice(offset);
+            const newEndTime = Math.floor((wordEndTime - wordBeginTime) * (offset / word.text.length)) + wordBeginTime;
+            let firstWord = {
+                rl: word.rl,
+                text: firstText,
+                time: [wordBeginTime, newEndTime]
+            };
+            let secondWord = {
+                rl: word.rl,
+                text: secondText,
+                time: [newEndTime, wordEndTime]
+            };
+            if (!firstText) firstWord = null;
+            if (!secondText) secondWord = null;
+
+            // 分割的2个 paragraph
+            const firstPara = JSON.parse(JSON.stringify(para));
+            const secondPara = JSON.parse(JSON.stringify(para));
+
+            secondPara.pId = null;
+
+            firstPara.pTime[0] = para.pTime[0];
+            firstPara.pTime[1] = newEndTime;
+            secondPara.pTime[0] = newEndTime;
+            secondPara.pTime[1] = para.pTime[1];
+            
+            secondPara.pId = null;
+            secondPara.role = '';
+            secondPara.roleName = '';
+
+            firstPara.words = [];
+            secondPara.words = [];
+            
+            para.words.forEach((item, index) => {
+                if (index < wIndex) {
+                    firstPara.words.push(item);
+                } else if (index > wIndex) {
+                    secondPara.words.push(item);
+                }
+            })
+
+            if (firstWord) {
+                firstPara.words.push(firstWord);
+            }
+            if (secondWord) {
+                secondPara.words.unshift(secondWord);
+            }
+
+            this.content.splice(pIndex, 1, firstPara, secondPara)
+            this.setCollapsedSelection([pIndex + 1, 0], 0);
+        } else {
+            // 有选区状态，先删除后分段
+            this.deleteContentBySelection();
+            this.splitParagraph();
+        }
+        
+    }
 }
 
 export default EditorCore;

@@ -114,7 +114,7 @@ export default class Editor extends Event {
             } , []);
             const speaker = h('div.caption-content-editor-speaker', { contenteditable: false }, []);
             if (this.ifShowSpeakerRole) {
-                const role = h('span', { style: { color: 'red' } }, para.roleName);
+                const role = h('span', { style: { color: 'red' } }, para.roleName || '设置说话人');
                 speaker.children.push(role);
             }
             if (this.ifShowSpeakerTime) {
