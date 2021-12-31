@@ -2,32 +2,42 @@ import debounce from 'lodash/debounce';
 import throttle from 'lodash/throttle';
 import EditorCore from './core';
 import Event from './utils/event';
-import h from './editorDom/h';
-import { patch } from './editorDom/patch';
-import findPath from './utils/findPath';
-import formatDuration from './utils/formatDuration';
-import { onKeyDown, onBeforeInput } from './events';
+import { patch, patchForce } from './dom/patch';
+import { findPath, findWordElementByPath } from './utils/findVnode';
+import contentToVnode from './utils/contentToVnode';
+import { onKeyDown, onBeforeInput, onClick, onCompositionStart, onCompositionUpdate, onCompositionEnd } from './events';
 
 export default class Editor extends Event {
     constructor(element) {
         super();
         this.editorCore = new EditorCore();
         this.element = element;
+        this.currentTime = 0;
         this.ifShowSpeakerRole = false;
         this.ifShowSpeakerTime = false;
+        this.isComposing = false;
+        this.composition = {
+            mark: null,
+            offset: null,
+        };
         this.bind();
         this.onSelectionChange = debounce(throttle(this.onSelectionChange, 100), 0);
+        this.contentToVnode = contentToVnode.bind(this);
     }
 
     bind() {
         document.addEventListener('selectionchange', this.onSelectionChange.bind(this));
         this.element.addEventListener('keydown', onKeyDown.bind(this));
         this.element.addEventListener('beforeinput', onBeforeInput.bind(this));
+        this.element.addEventListener('click', onClick.bind(this));
+        this.element.addEventListener('compositionstart', onCompositionStart.bind(this));
+        this.element.addEventListener('compositionupdate', onCompositionUpdate.bind(this));
+        this.element.addEventListener('compositionend', onCompositionEnd.bind(this));
     }
 
     onSelectionChange() {
         const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
+        if (selection.rangeCount > 0 && !this.isComposing) {
             const range = selection.getRangeAt(0);
             const { startContainer, startOffset, endContainer, endOffset } = range;
             const startDom = startContainer.nodeType === 3 ? startContainer.parentNode : startContainer;
@@ -46,7 +56,7 @@ export default class Editor extends Event {
 
     setContent(content) {
         this.editorCore.setContent(content);   
-        this.vnode = this.contentToVnode(content);
+        this.vnode = this.contentToVnode();
         patch(this.element, this.vnode);
         this.emit('onChange', this.editorCore.content);
     }
@@ -60,33 +70,26 @@ export default class Editor extends Event {
     }
 
     resetRange() {
-        const range = document.createRange();
-        const { anchor, focus } = this.editorCore.selection;
-        const start = this.findWordElementByPath(anchor.path);
-        range.setStart(start, anchor.offset);
-        if (this.editorCore.isCollapsed()) {
-            range.setEnd(start, anchor.offset);
-        } else {
-            const end = this.findWordElementByPath(focus.path);
-            range.setEnd(end, focus.offset);
+        if (this.editorCore.selection) {
+            const range = document.createRange();
+            const { anchor, focus } = this.editorCore.selection;
+            const start = findWordElementByPath(anchor.path, this.vnode);
+            range.setStart(start, anchor.offset);
+            if (this.editorCore.isCollapsed()) {
+                range.setEnd(start, anchor.offset);
+            } else {
+                const end = findWordElementByPath(focus.path, this.vnode);
+                range.setEnd(end, focus.offset);
+            }
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
         }
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-    }
-
-    findWordElementByPath(path) {
-        const [pIndex, wIndex] = path;
-        const elm = this.vnode.children[pIndex].children[1].children[wIndex].elm;
-        if (elm.childNodes.length > 0) {
-            return elm.childNodes[0];
-        }
-        return elm;
     }
 
     updateContent(content) {
         this.editorCore.setContent(content);
-        const vnode = this.contentToVnode(content);
+        const vnode = this.contentToVnode();
         patch(this.vnode, vnode);
         this.vnode = vnode;
         this.emit('onChange', this.editorCore.content, this.vnode);
@@ -102,46 +105,12 @@ export default class Editor extends Event {
         this.emit('onChange', this.editorCore.content, this.vnode);
     }
 
-    contentToVnode() {
-        const content = this.editorCore.content;
-        const c = h('div', []);
-        content.forEach((para, pIndex) => {
-            const pc = h('div.para', {
-                exc: {
-                    st: para.pTime[0],
-                    path: [pIndex, 0],
-                }
-            } , []);
-            const speaker = h('div.caption-content-editor-speaker', { contenteditable: false }, []);
-            if (this.ifShowSpeakerRole) {
-                const role = h('span', { style: { color: 'red' } }, para.roleName || '设置说话人');
-                speaker.children.push(role);
-            }
-            if (this.ifShowSpeakerTime) {
-                const time = h('span.caption-content-editor-time', formatDuration(para.pTime[0]))
-                speaker.children.push(time);
-            }
-            const p = h('p.editor-paragraph', {
-                exc: {
-                    st: para.pTime[0],
-                    path: [pIndex, 0],
-                }
-            } ,[]);
-            para.words.forEach((word, wIndex) => {
-                const w = h('span.editor-vad', {
-                    exc: {
-                        st: word.time[0], 
-                        et: word.time[0], 
-                        path: [pIndex, wIndex]
-                    }
-                }, word.text);
-                p.children.push(w);
-            });
-            pc.children.push(speaker);
-            pc.children.push(p);
-            c.children.push(pc);
-        });
-    
-        return c;
+    // 强制更新段落
+    updateForce(mark) {
+        const vnode = this.contentToVnode();
+        patchForce(this.element, this.vnode, vnode, mark);
+        this.vnode = vnode;
+        this.emit('onChange', this.editorCore.content, this.vnode);
+        this.resetRange();
     }
 }

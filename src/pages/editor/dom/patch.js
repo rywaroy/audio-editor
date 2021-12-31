@@ -82,15 +82,20 @@ function createElm(vnode) {
 //     }
 // }
 
-function patchParagraphs(oldVnode, vnode) {
+function patchParagraphs(oldVnode, vnode, mark) {
     const para = vnode.children;
     const oldPara = oldVnode.children;
     let i = 0;
     let j = 0;
+    let start = -1;
+    let end = -1;
+    if (mark) {
+        start = mark[0];
+        end = mark[1];
+    }
     while(i < oldPara.length && j < para.length) {
         const oldST = oldPara[i].data.exc.st;
         const st = para[j].data.exc.st;
-
         if (oldST < st) { // 删除段落
             oldPara[i].elm.remove();
             i++;
@@ -99,10 +104,16 @@ function patchParagraphs(oldVnode, vnode) {
             oldVnode.elm.insertBefore(newPara, oldPara[i].elm);
             j++;
         } else {
-            patchClass(oldPara[i], para[j]);
-            para[j].elm = oldPara[i].elm;
-            patchSpeaker(oldPara[i].children[0], para[j].children[0]);
-            patchWords(oldPara[i].children[1], para[j].children[1]);
+            if (i >= start && i <= end) {
+                const newPara = createElm(para[j]);
+                oldVnode.elm.insertBefore(newPara, oldPara[i].elm);
+                oldPara[i].elm.remove();
+            } else {
+                patchClass(oldPara[i], para[j]);
+                para[j].elm = oldPara[i].elm;
+                patchSpeaker(oldPara[i].children[0], para[j].children[0]);
+                patchWords(oldPara[i].children[1], para[j].children[1]);
+            }
             i++;
             j++;
         }
@@ -254,6 +265,21 @@ export function patch(oldVnode, vnode) {
         vnode.elm = oldVnode.elm;
         patchParagraphs(oldVnode, vnode);
     } else {
+        const elm = oldVnode.elm;
+        createElm(vnode);
+        elm.appendChild(vnode.elm);
+    }
+}
+
+export function patchForce(element, oldVnode, vnode, mark) {
+    if (mark[0] === mark[1]) {
+        vnode.elm = oldVnode.elm;
+        patchParagraphs(oldVnode, vnode, mark);
+    } else {
+        for (let i = element.childNodes.length - 1; i >= 0; i--) {
+            element.removeChild(element.childNodes[i]);
+        }
+        oldVnode = emptyNodeAt(element); 
         const elm = oldVnode.elm;
         createElm(vnode);
         elm.appendChild(vnode.elm);
