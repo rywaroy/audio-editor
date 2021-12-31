@@ -39,3 +39,12 @@ export function findTime(element, vnode) {
 
     return time;
 }
+
+export function findWordElementByPath(path, vnode) {
+    const [pIndex, wIndex] = path;
+    const elm = vnode.children[pIndex].children[1].children[wIndex].elm;
+    if (elm.childNodes.length > 0) {
+        return elm.childNodes[0];
+    }
+    return elm;
+}

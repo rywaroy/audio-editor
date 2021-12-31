@@ -215,6 +215,7 @@ class EditorCore {
         const endText = this.content[focusPIndex].words[focusWIndex].text.slice(focusOffset, this.content[focusPIndex].words[focusWIndex].text.length);
 
         if (anchorPIndex === focusPIndex && anchorWIndex === focusWIndex) { // 在同一个词中
+            const word = this.content[anchorPIndex].words[anchorWIndex];
             const txt = this.content[anchorPIndex].words[anchorWIndex].text;
             const newTxt = txt.slice(0, anchorOffset) + txt.slice(focusOffset);
             
@@ -226,6 +227,11 @@ class EditorCore {
                 this.content[anchorPIndex].words[anchorWIndex].text = newTxt;
                 // 光标重置到 anchorOffset
                 this.setCollapsedSelection([focusPIndex, focusWIndex], anchorOffset);
+            }
+            // 该段已经没有词
+            if (this.content[anchorPIndex].words.length === 0) {
+                word.text = '';
+                this.content[anchorPIndex].words = [word];
             }
         } else { // 在不同词中
             // 先修改开头和结尾的词

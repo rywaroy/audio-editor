@@ -1,7 +1,5 @@
 export default function onBeforeInput(e) {
     e.preventDefault();
-    // console.log(e);
-
     const { inputType: type, data } = e;
 
     if (type === 'insertCompositionText' || type === 'deleteCompositionText') {
@@ -38,6 +36,7 @@ export default function onBeforeInput(e) {
             break;
         }
 
+        case 'deleteByCut':
         case 'deleteSoftLineBackward':
         case 'deleteContentBackward': {
             // 后删
