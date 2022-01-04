@@ -4,6 +4,7 @@ import onClick from './onClick';
 import onCompositionStart from './onCompositionStart';
 import onCompositionUpdate from './onCompositionUpdate';
 import onCompositionEnd from './onCompositionEnd';
+import onPaste from './onPaste';
 
 export {
     onBeforeInput,
@@ -12,5 +13,6 @@ export {
     onCompositionStart,
     onCompositionUpdate,
     onCompositionEnd,
+    onPaste,
 };
 
