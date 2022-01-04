@@ -5,6 +5,7 @@ export default function onBeforeInput(e) {
     if (type === 'insertCompositionText' || type === 'deleteCompositionText') {
         return;
     }
+
     switch (type) {
         case 'insertFromDrop':
         case 'insertFromPaste':
@@ -45,4 +46,5 @@ export default function onBeforeInput(e) {
             break;
         }
     }
+    this.setHistory();
 }
